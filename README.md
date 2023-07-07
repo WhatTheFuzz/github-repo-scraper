@@ -2,7 +2,7 @@
 
 ## Description
 
-Just a simple script to pull down all publib GitHub repositories. It stores the results in a CSV, which is not lookup efficient. It should be easy to change to something like SQL, but YMMV; CSV is good enough for my needs.
+Just a simple script to pull down all public GitHub repositories. It stores the results in a CSV, which is not lookup efficient. It should be easy to change to something like SQL, but YMMV; CSV is good enough for my needs.
 
 The script grabs all of the [properties][repo-properties] available to Repository objects. Each repository is stored as a new row in the CSV. The CSV is meant to be read in with `pandas`.
 

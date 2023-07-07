@@ -1,0 +1,6 @@
+# Don't commit the key.
+.env
+# Ignore data written to the CSV.
+*.csv
+# Ignore local errors.
+*.log

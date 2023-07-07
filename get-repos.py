@@ -121,17 +121,19 @@ PROPERTIES = [
 ]
 
 
-def get_max_index(df: pd.DataFrame) -> Union[int, NotSet]:
-    """Returns the maximum index from the dataframe.
-    If the index is NaN, returns NotSet.
+def get_max_id(df: pd.DataFrame) -> Union[int, NotSet]:
+    """Returns the maximum id from the dataframe.
+    The is is used as a reference to start pulling repositories. See the 
+    `since` parameter in PyGithub.Github.get_repos method.
+    If the id is NaN, returns NotSet.
     """
     try:
-        max_index = df.index.max()
+        max_index = df.id.max()
         if np.isnan(max_index):
             return NotSet
         return int(max_index)
     except ValueError as e:
-        print(f"[-] Unknown index max: {df.index.max()}")
+        print(f"[-] Unknown index max: {df.id.max()}")
         raise e
 
 
@@ -158,7 +160,7 @@ def save_repos_to_file(filename: str, repos: PaginatedList):
                             repo_dict[prop] = getattr(repo, prop)
                     #  Ensure that ID is an integer.
                     try:
-                        int(repo_dict['id'])
+                        int(repo_dict["id"])
                     except:
                         continue
                     df = pd.DataFrame(data=[repo_dict], columns=PROPERTIES)
@@ -201,8 +203,10 @@ def get_repos_with_backoff(github: Github, save_results_to: str, since: int = No
         time.sleep(sleep_time)
 
     # Open the CSV and get the last repository ID.
-    df = pd.read_csv(save_results_to, usecols=["id"], index_col="id", dtype={'id': pd.Int64Dtype()})
-    last_id = get_max_index(df)
+    df = pd.read_csv(
+        save_results_to, usecols=["id"], index_col="id", dtype={"id": pd.Int64Dtype()}
+    )
+    last_id = get_max_id(df)
     get_repos_with_backoff(
         github=github, save_results_to=save_results_to, since=last_id
     )
@@ -254,7 +258,7 @@ if __name__ == "__main__":
     last_id = 0
     with open(filename, mode="a", encoding="utf-8") as f:
         if f.tell() != 0:
-            df = pd.read_csv(filename, usecols=["id"], dtype={'id': pd.Int64Dtype()})
-            last_id = get_max_index(df)
+            df = pd.read_csv(filename, usecols=["id"], dtype={"id": pd.Int64Dtype()})
+            last_id = get_max_id(df)
 
     get_repos_with_backoff(github=g, save_results_to="repos.csv", since=last_id)

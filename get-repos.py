@@ -169,12 +169,13 @@ def save_repos_to_file(filename: str, repos: PaginatedList):
                     raise rate_limit_exceeded
                 except GithubException as e:
                     if hasattr(e, "data"):
-                        err_message = (
-                            f"[+] {repo.name}: {e.data.get('message')} skipping."
-                        )
-                        # Log it to a file.
-                        logging.error(err_message)
-                        print(err_message)
+                        if hasattr(e.data, 'message'):
+                            err_message = (
+                                f"[+] {repo.name}: {e.data.get('message')} skipping."
+                            )
+                            # Log it to a file.
+                            logging.error(err_message)
+                            print(err_message)
                     else:
                         raise e
                     continue
@@ -204,7 +205,7 @@ def get_repos_with_backoff(github: Github, save_results_to: str, since: int = No
 
     # Open the CSV and get the last repository ID.
     df = pd.read_csv(
-        save_results_to, usecols=["id"], index_col="id", dtype={"id": pd.Int64Dtype()}
+        save_results_to, usecols=["id"], dtype={"id": pd.Int64Dtype()}
     )
     last_id = get_max_id(df)
     get_repos_with_backoff(

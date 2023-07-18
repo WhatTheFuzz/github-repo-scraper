@@ -121,12 +121,21 @@ PROPERTIES = [
 ]
 
 
-def get_max_id(df: pd.DataFrame) -> Union[int, NotSet]:
+def get_max_id(filename: str) -> Union[int, NotSet]:
     """Returns the maximum id from the dataframe.
-    The is is used as a reference to start pulling repositories. See the 
+    The is is used as a reference to start pulling repositories. See the
     `since` parameter in PyGithub.Github.get_repos method.
     If the id is NaN, returns NotSet.
     """
+    with open(filename, mode="a", encoding="utf-8") as f:
+        # If the file isn't empty.
+        if f.tell() != 0:
+            df = pd.read_csv(filename, usecols=["id"])
+            df = pd.to_numeric(df.id, errors="coerce").astype(pd.Int64Dtype())
+            df = df.reset_index()
+        # File is empty, return NotSet.
+        else:
+            return NotSet
     try:
         max_index = df.id.max()
         if np.isnan(max_index):
@@ -135,13 +144,6 @@ def get_max_id(df: pd.DataFrame) -> Union[int, NotSet]:
     except ValueError as e:
         print(f"[-] Unknown index max: {df.id.max()}")
         raise e
-
-
-def is_repo_we_care_about(repo: Repository) -> bool:
-    """Filters the repositories we care about. Returns True if it passes the
-    filter, False otherwise.
-    """
-    return repo.public and repo.language == "C" and not repo.fork
 
 
 def save_repos_to_file(filename: str, repos: PaginatedList):
@@ -169,7 +171,7 @@ def save_repos_to_file(filename: str, repos: PaginatedList):
                     raise rate_limit_exceeded
                 except GithubException as e:
                     if hasattr(e, "data"):
-                        if hasattr(e.data, 'message'):
+                        if hasattr(e.data, "message"):
                             err_message = (
                                 f"[+] {repo.name}: {e.data.get('message')} skipping."
                             )
@@ -203,11 +205,8 @@ def get_repos_with_backoff(github: Github, save_results_to: str, since: int = No
         # Sleep until the rate limit resets.
         time.sleep(sleep_time)
 
-    # Open the CSV and get the last repository ID.
-    df = pd.read_csv(
-        save_results_to, usecols=["id"], dtype={"id": pd.Int64Dtype()}
-    )
-    last_id = get_max_id(df)
+    # Get the last ID to call this function again.
+    last_id = get_max_id(filename=save_results_to)
     get_repos_with_backoff(
         github=github, save_results_to=save_results_to, since=last_id
     )
@@ -256,10 +255,6 @@ if __name__ == "__main__":
     # Check the CSV for the last seen index. The get_repo() uses the index as
     # the "since" parameter, so we can continue from where we left off.
     # Create the file if it does not exist.
-    last_id = 0
-    with open(filename, mode="a", encoding="utf-8") as f:
-        if f.tell() != 0:
-            df = pd.read_csv(filename, usecols=["id"], dtype={"id": pd.Int64Dtype()})
-            last_id = get_max_id(df)
+    last_id = get_max_id(filename=filename)
 
-    get_repos_with_backoff(github=g, save_results_to="repos.csv", since=last_id)
+    get_repos_with_backoff(github=g, save_results_to=filename, since=last_id)
